@@ -21,6 +21,7 @@ let package = Package(
     dependencies: [
         // Depend on the Swift 5.9 release of SwiftSyntax
         .package(url: "https://github.com/apple/swift-syntax.git", from: "509.0.0"),
+        .package(url: "https://github.com/Swinject/Swinject.git", from: "2.8.4")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -38,7 +39,7 @@ let package = Package(
         .target(name: "SwinjectMacros", dependencies: ["SwinjectMacrosMacros"]),
 
         // A client of the library, which is able to use the macro in its own code.
-        .executableTarget(name: "SwinjectMacrosClient", dependencies: ["SwinjectMacros"]),
+        .executableTarget(name: "SwinjectMacrosClient", dependencies: ["SwinjectMacros", "Swinject"]),
 
         // A test target used to develop the macro implementation.
         .testTarget(
