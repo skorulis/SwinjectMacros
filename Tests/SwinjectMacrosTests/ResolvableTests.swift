@@ -18,19 +18,36 @@ final class ResolvableTests: XCTestCase {
         assertMacroExpansion(
             """
             @Resolvable
-            init(arg1: String, arg2: Int) {
-              
-            }
+            init(arg1: String, arg2: Int) {}
             """,
             expandedSource: """
             
-            init(arg1: String, arg2: Int) {
-              
-            }
+            init(arg1: String, arg2: Int) {}
 
             static func make(resolver: Resolver) -> Self {
                  return .init(
+                     arg1: resolver.resolve(String.self)!,
+                     arg2: resolver.resolve(Int.self)!
+                 )
+            }
+            """,
+            macros: testMacros
+        )
+    }
+    
+    func test_closure_param() throws {
+        assertMacroExpansion(
+            """
+            @Resolvable
+            init(closure: @escaping () -> Void) {}
+            """,
+            expandedSource: """
+            
+            init(closure: @escaping () -> Void) {}
 
+            static func make(resolver: Resolver) -> Self {
+                 return .init(
+                     closure: resolver.resolve((() -> Void).self)!
                  )
             }
             """,

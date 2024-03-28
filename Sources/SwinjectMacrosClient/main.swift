@@ -1,3 +1,4 @@
+import Swinject
 import SwinjectMacros
 
 let a = 17

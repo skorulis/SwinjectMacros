@@ -12,28 +12,39 @@ public struct ResolvableMacro: PeerMacro {
         providingPeersOf declaration: some DeclSyntaxProtocol,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        print(declaration)
         guard let initDecl = declaration.as(InitializerDeclSyntax.self) else {
             throw Error.nonInitializer
         }
         let params = try initDecl.signature.parameterClause.parameters.map { paramSyntax in
-            guard let typeID = paramSyntax.type.as(IdentifierTypeSyntax.self) else {
-                throw Error.invalidParamType(paramSyntax.type.description)
-            }
-            let type = typeID.name.text
+            let type = try extractType(typeSyntax: paramSyntax.type)
             return Param(name: paramSyntax.firstName.text, type: type)
         }
         
-        print(params)
+        let paramsResolved = params.map { param in
+            return "\(param.name): resolver.resolve(\(param.type).self)!"
+        }
+        let paramsString = paramsResolved.joined(separator: ",\n")
+        
         return [
            """
            static func make(resolver: Resolver) -> Self {
                 return .init(
-           
+                    \(raw: paramsString)
                 )
            }
            """
            ]
+    }
+    
+    private static func extractType(typeSyntax: TypeSyntax) throws -> String {
+        if let type = typeSyntax.as(IdentifierTypeSyntax.self) {
+            return type.name.text
+        } else if let type = typeSyntax.as(AttributedTypeSyntax.self) {
+            return try extractType(typeSyntax: type.baseType)
+        } else if let type = typeSyntax.as(FunctionTypeSyntax.self) {
+            return "(\(type.description))"
+        }
+        throw Error.invalidParamType(typeSyntax.description)
     }
 }
 

@@ -46,6 +46,7 @@ let package = Package(
             name: "SwinjectMacrosTests",
             dependencies: [
                 "SwinjectMacrosMacros",
+                "Swinject",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ]
         ),
