@@ -1,12 +1,12 @@
 //  Created by Alexander Skorulis on 28/3/2024.
 
-import SwinjectMacrosMacros
+import SwinjectMacrosImplementations
 import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import XCTest
 
-#if canImport(SwinjectMacrosMacros)
-import SwinjectMacrosMacros
+#if canImport(SwinjectMacrosImplementations)
+import SwinjectMacrosImplementations
 
 let testMacros: [String: Macro.Type] = [
     "Resolvable": ResolvableMacro.self
@@ -48,6 +48,26 @@ final class ResolvableTests: XCTestCase {
             static func make(resolver: Resolver) -> Self {
                  return .init(
                      closure: resolver.resolve((() -> Void).self)!
+                 )
+            }
+            """,
+            macros: testMacros
+        )
+    }
+    
+    func test_default_param() throws {
+        assertMacroExpansion(
+            """
+            @Resolvable
+            init(value: Int = 5) {}
+            """,
+            expandedSource: """
+            
+            init(value: Int = 5) {}
+
+            static func make(resolver: Resolver) -> Self {
+                 return .init(
+                     value: resolver.resolve(Int.self) ?? 5
                  )
             }
             """,

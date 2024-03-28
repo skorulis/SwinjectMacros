@@ -17,11 +17,17 @@ public struct ResolvableMacro: PeerMacro {
         }
         let params = try initDecl.signature.parameterClause.parameters.map { paramSyntax in
             let type = try extractType(typeSyntax: paramSyntax.type)
-            return Param(name: paramSyntax.firstName.text, type: type)
+            
+            return Param(
+                name: paramSyntax.firstName.text,
+                type: type,
+                defaultValue: extractDefault(paramSyntax: paramSyntax)
+            )
+            
         }
         
         let paramsResolved = params.map { param in
-            return "\(param.name): resolver.resolve(\(param.type).self)!"
+            return resolveCall(param: param)
         }
         let paramsString = paramsResolved.joined(separator: ",\n")
         
@@ -36,6 +42,13 @@ public struct ResolvableMacro: PeerMacro {
            ]
     }
     
+    private static func resolveCall(param: Param) -> String {
+        if let defaultValue = param.defaultValue {
+            return "\(param.name): resolver.resolve(\(param.type).self) ?? \(defaultValue)"
+        }
+        return "\(param.name): resolver.resolve(\(param.type).self)!"
+    }
+    
     private static func extractType(typeSyntax: TypeSyntax) throws -> String {
         if let type = typeSyntax.as(IdentifierTypeSyntax.self) {
             return type.name.text
@@ -46,12 +59,20 @@ public struct ResolvableMacro: PeerMacro {
         }
         throw Error.invalidParamType(typeSyntax.description)
     }
+    
+    private static func extractDefault(paramSyntax: FunctionParameterSyntax) -> String? {
+        guard let defaultValue = paramSyntax.defaultValue else {
+            return nil
+        }
+        return defaultValue.description.replacingOccurrences(of: "= ", with: "")
+    }
 }
 
 private extension ResolvableMacro {
     private struct Param {
         let name: String
         let type: String
+        let defaultValue: String?
     }
     
     enum Error: LocalizedError {
