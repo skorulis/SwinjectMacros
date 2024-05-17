@@ -25,12 +25,23 @@ final class SwinjectResolutionTests: XCTestCase {
         let defaultedService = emptyContainer.resolve(Service3.self)
         XCTAssertEqual(defaultedService?.value, 2)
         
-        let filledRouter = Factory.container
-        filledRouter.register(Service3.self, factory: Service3.make)
-        let service = filledRouter.resolve(Service3.self)
+        let filledContainer = Factory.container
+        filledContainer.register(Service3.self, factory: Service3.make)
+        let service = filledContainer.resolve(Service3.self)
         XCTAssertEqual(service?.value, 5)
     }
     
+    func test_argument() {
+        let container = Container()
+        container.register(Service4.self, factory: Service4.make)
+        
+        let service = container.resolve(Service4.self, argument: Float(5))
+        XCTAssertEqual(service?.value, 5)
+    }
+    
+    func test_parameter_wihout_label() {
+        
+    }
 }
 
 private struct Service1 {
@@ -61,6 +72,15 @@ private struct Service3 {
     @Resolvable
     init(defaultedValue: Int = 2) {
         self.value = defaultedValue
+    }
+}
+
+private struct Service4 {
+    let value: Float
+    @Resolvable
+    @Argument("value")
+    init(value: Float) {
+        self.value = value
     }
 }
 

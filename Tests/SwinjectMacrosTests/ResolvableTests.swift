@@ -9,7 +9,8 @@ import XCTest
 import SwinjectMacrosImplementations
 
 let testMacros: [String: Macro.Type] = [
-    "Resolvable": ResolvableMacro.self
+    "Resolvable": ResolvableMacro.self,
+    "Argument": ArgumentMacro.self,
 ]
 #endif
 
@@ -68,6 +69,27 @@ final class ResolvableTests: XCTestCase {
             static func make(resolver: Resolver) -> Self {
                  return .init(
                      value: resolver.resolve(Int.self) ?? 5
+                 )
+            }
+            """,
+            macros: testMacros
+        )
+    }
+    
+    func test_argument() throws {
+        assertMacroExpansion(
+            """
+            @Resolvable
+            @Argument("value")
+            init(value: Int) {}
+            """,
+            expandedSource: """
+            
+            init(value: Int) {}
+
+            static func make(resolver: Resolver, value: Int) -> Self {
+                 return .init(
+                     value: value
                  )
             }
             """,
