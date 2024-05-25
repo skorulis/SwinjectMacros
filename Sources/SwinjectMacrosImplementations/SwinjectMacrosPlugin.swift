@@ -10,5 +10,6 @@ struct MacroFunPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         ResolvableMacro.self,
         ArgumentMacro.self,
+        NamedMacro.self,
     ]
 }

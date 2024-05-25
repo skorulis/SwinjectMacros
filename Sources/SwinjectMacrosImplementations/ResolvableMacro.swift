@@ -23,7 +23,7 @@ public struct ResolvableMacro: PeerMacro {
             return Param(
                 name: name,
                 type: type,
-                isArgument: hints.isArgument(name: name),
+                hint: hints[name],
                 defaultValue: extractDefault(paramSyntax: paramSyntax)
             )
         }
@@ -34,6 +34,7 @@ public struct ResolvableMacro: PeerMacro {
         let paramsString = paramsResolved.joined(separator: ",\n")
         var makeArguments = ["resolver: Resolver"]
         for param in params {
+            
             if param.isArgument {
                 makeArguments.append("\(param.name): \(param.type.name)")
             }
@@ -57,9 +58,9 @@ public struct ResolvableMacro: PeerMacro {
             return "\(param.name): \(param.name)"
         }
         if let defaultValue = param.defaultValue {
-            return "\(param.name): resolver.resolve(\(param.type.name).self) ?? \(defaultValue)"
+            return "\(param.resolveCall) ?? \(defaultValue)"
         }
-        return "\(param.name): resolver.resolve(\(param.type.name).self)!"
+        return "\(param.resolveCall)!"
     }
     
     private static func extractType(typeSyntax: TypeSyntax) throws -> TypeInformation {
@@ -84,19 +85,22 @@ public struct ResolvableMacro: PeerMacro {
         return defaultValue.description.replacingOccurrences(of: "= ", with: "")
     }
     
-    private static func parseHints(attributes: AttributeListSyntax) throws -> HintContainer {
-        let hints = try attributes.compactMap { element in
+    private static func parseHints(attributes: AttributeListSyntax) throws -> [String: ParamHint] {
+        var hints: [String: ParamHint] = [:]
+        try attributes.forEach { element in
             switch element {
             case let .attribute(attribute):
-                return try hint(attribute: attribute)
+                if let hint = try self.hint(attribute: attribute) {
+                    hints[hint.0] = hint.1
+                }
             case .ifConfigDecl:
-                return nil
+                break
             }
         }
-        return HintContainer(hints: hints)
+        return hints
     }
     
-    private static func hint(attribute: AttributeSyntax) throws -> Hint? {
+    private static func hint(attribute: AttributeSyntax) throws -> (String, ParamHint)? {
         guard let name = attribute.attributeName.as(IdentifierTypeSyntax.self)?.name.text else {
             return nil
         }
@@ -105,17 +109,29 @@ public struct ResolvableMacro: PeerMacro {
             return nil
         }
         if name == "Argument" {
-            guard let argument = argumentList.first else {
-                throw Error.expectedArgumentName
-            }
-            guard let expressions = argument.expression.as(StringLiteralExprSyntax.self) else {
-                throw Error.expectedExpression
-            }
-            let name = expressions.segments.first?.trimmedDescription
-            return .argument(name: name!.replacingOccurrences(of: "\"", with: ""))
+            let param = try Self.argumentListValue(argumentList, index: 0).replacingOccurrences(of: "\"", with: "")
+            return (param, .argument)
+        } else if name == "Named" {
+            let param = try Self.argumentListValue(argumentList, index: 0).replacingOccurrences(of: "\"", with: "")
+            // TODO: Allow for tokens
+            var value = try Self.argumentListValue(argumentList, index: 1)
+            value = "\"\(value)\""
+            return (param, .named(value))
         }
         
         return nil
+    }
+    
+    private static func argumentListValue(_ list: LabeledExprListSyntax, index: Int) throws -> String {
+        guard list.count > index else {
+            throw Error.expectedArgumentName
+        }
+        let listArray = list.map { $0 }
+        let argument = listArray[index]
+        guard let expressions = argument.expression.as(StringLiteralExprSyntax.self) else {
+            throw Error.expectedExpression
+        }
+        return expressions.segments.first!.trimmedDescription
     }
 }
 
@@ -123,8 +139,20 @@ private extension ResolvableMacro {
     struct Param {
         let name: String
         let type: TypeInformation
-        let isArgument: Bool
+        let hint: ParamHint?
         let defaultValue: String?
+        
+        var isArgument: Bool {
+            hint == .argument
+        }
+        
+        var resolveCall: String {
+            if let hint, case let ParamHint.named(swinjectName) = hint {
+                return "\(name): resolver.resolve(\(type.name).self, name: \(swinjectName))"
+            } else {
+                return "\(name): resolver.resolve(\(type.name).self)"
+            }
+        }
     }
     
     struct TypeInformation {
@@ -135,22 +163,13 @@ private extension ResolvableMacro {
         }
     }
     
-    enum Hint {
-        case argument(name: String)
+    enum ParamHint: Equatable {
+        case argument
+        case named(String)
     }
     
     private struct HintContainer {
-        let hints: [Hint]
-        
-        func isArgument(name: String) -> Bool {
-            for hint in hints {
-                if case .argument(let argumentName) = hint, name == argumentName {
-                    return true
-                }
-            }
-            return false
-        }
-        
+        var hints: [String: ParamHint]
     }
     
     enum Error: LocalizedError {

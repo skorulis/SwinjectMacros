@@ -6,3 +6,6 @@ public macro Resolvable() = #externalMacro(module: "SwinjectMacrosImplementation
 
 @attached(peer)
 public macro Argument(_ name: String) = #externalMacro(module: "SwinjectMacrosImplementations", type: "ArgumentMacro")
+
+@attached(peer)
+public macro Named(_ variable: String, _ name: String) = #externalMacro(module: "SwinjectMacrosImplementations", type: "NamedMacro")

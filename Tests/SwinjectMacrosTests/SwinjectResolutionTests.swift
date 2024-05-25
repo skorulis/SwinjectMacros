@@ -39,8 +39,13 @@ final class SwinjectResolutionTests: XCTestCase {
         XCTAssertEqual(service?.value, 5)
     }
     
-    func test_parameter_wihout_label() {
+    func test_named_parameter() {
+        let container = Container()
+        container.register(Float.self, name: "float2") { _ in 2}
+        container.register(Service5.self, factory: Service5.make)
         
+        let service = container.resolve(Service5.self)
+        XCTAssertEqual(service?.value, 2)
     }
 }
 
@@ -79,6 +84,15 @@ private struct Service4 {
     let value: Float
     @Resolvable
     @Argument("value")
+    init(value: Float) {
+        self.value = value
+    }
+}
+
+private struct Service5 {
+    let value: Float
+    @Resolvable
+    @Named("value", "float2")
     init(value: Float) {
         self.value = value
     }

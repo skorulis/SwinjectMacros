@@ -11,6 +11,7 @@ import SwinjectMacrosImplementations
 let testMacros: [String: Macro.Type] = [
     "Resolvable": ResolvableMacro.self,
     "Argument": ArgumentMacro.self,
+    "Named": NamedMacro.self,
 ]
 #endif
 
@@ -90,6 +91,27 @@ final class ResolvableTests: XCTestCase {
             static func make(resolver: Resolver, value: Int) -> Self {
                  return .init(
                      value: value
+                 )
+            }
+            """,
+            macros: testMacros
+        )
+    }
+    
+    func test_named() throws {
+        assertMacroExpansion(
+            """
+            @Resolvable
+            @Named("value", "customName")
+            init(value: Int) {}
+            """,
+            expandedSource: """
+            
+            init(value: Int) {}
+
+            static func make(resolver: Resolver) -> Self {
+                 return .init(
+                     value: resolver.resolve(Int.self, name: "customName")!
                  )
             }
             """,
