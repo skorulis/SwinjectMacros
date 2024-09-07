@@ -12,6 +12,10 @@ public struct ResolvableMacro: PeerMacro {
         providingPeersOf declaration: some DeclSyntaxProtocol,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
+        guard let resolverTypeArg = node.attributeName.as(IdentifierTypeSyntax.self)?.genericArgumentClause?.arguments.first else {
+            throw Error.missingResolverType
+        }
+        let resolverType = resolverTypeArg.description
         guard let initDecl = declaration.as(InitializerDeclSyntax.self) else {
             throw Error.nonInitializer
         }
@@ -32,7 +36,7 @@ public struct ResolvableMacro: PeerMacro {
             return resolveCall(param: param)
         }
         let paramsString = paramsResolved.joined(separator: ",\n")
-        var makeArguments = ["resolver: Resolver"]
+        var makeArguments = ["resolver: \(resolverType)"]
         for param in params {
             
             if param.isArgument {
@@ -173,6 +177,7 @@ private extension ResolvableMacro {
     }
     
     enum Error: LocalizedError {
+        case missingResolverType
         case nonInitializer
         case expectedArgumentName
         case expectedExpression
@@ -180,6 +185,8 @@ private extension ResolvableMacro {
         
         var errorDescription: String? {
             switch self {
+            case .missingResolverType:
+                return "@Resolveable requires a generic parameter"
             case .nonInitializer:
                 return "@Resolvable can only be used on init declarations"
             case let .invalidParamType(string):

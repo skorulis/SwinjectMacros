@@ -2,7 +2,7 @@
 // https://docs.swift.org/swift-book
 
 @attached(peer, names: named(make))
-public macro Resolvable<ResolverType>() = #externalMacro(module: "SwinjectMacrosImplementations", type: "ResolvableMacro")
+public macro Resolvable<ResolverType>(_ arguments: [String] = []) = #externalMacro(module: "SwinjectMacrosImplementations", type: "ResolvableMacro")
 
 @attached(peer)
 public macro Argument(_ name: String) = #externalMacro(module: "SwinjectMacrosImplementations", type: "ArgumentMacro")

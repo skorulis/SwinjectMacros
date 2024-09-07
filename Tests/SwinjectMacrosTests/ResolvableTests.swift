@@ -19,7 +19,7 @@ final class ResolvableTests: XCTestCase {
     func test_macro_expansion() throws {
         assertMacroExpansion(
             """
-            @Resolvable
+            @Resolvable<Resolver>
             init(arg1: String, arg2: Int) {}
             """,
             expandedSource: """
@@ -40,14 +40,14 @@ final class ResolvableTests: XCTestCase {
     func test_closure_param() throws {
         assertMacroExpansion(
             """
-            @Resolvable
+            @Resolvable<CustomResolver>
             init(closure: @escaping () -> Void) {}
             """,
             expandedSource: """
             
             init(closure: @escaping () -> Void) {}
 
-            static func make(resolver: Resolver) -> Self {
+            static func make(resolver: CustomResolver) -> Self {
                  return .init(
                      closure: resolver.resolve((() -> Void).self)!
                  )
@@ -60,7 +60,7 @@ final class ResolvableTests: XCTestCase {
     func test_default_param() throws {
         assertMacroExpansion(
             """
-            @Resolvable
+            @Resolvable<Resolver>
             init(value: Int = 5) {}
             """,
             expandedSource: """
@@ -80,7 +80,7 @@ final class ResolvableTests: XCTestCase {
     func test_argument() throws {
         assertMacroExpansion(
             """
-            @Resolvable
+            @Resolvable<Resolver>
             @Argument("value")
             init(value: Int) {}
             """,
@@ -101,7 +101,7 @@ final class ResolvableTests: XCTestCase {
     func test_named() throws {
         assertMacroExpansion(
             """
-            @Resolvable
+            @Resolvable<Resolver>
             @Named("value", "customName")
             init(value: Int) {}
             """,
