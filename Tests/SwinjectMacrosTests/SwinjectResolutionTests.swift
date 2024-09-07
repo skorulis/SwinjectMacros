@@ -54,7 +54,7 @@ private struct Service1 {
     let string: String
     let value: Int
     
-    @Resolvable
+    @Resolvable<Resolver>
     init(string: String, value: Int) {
         self.string = string
         self.value = value
@@ -64,7 +64,7 @@ private struct Service1 {
 private struct Service2 {
     let closure: () -> Void
     
-    @Resolvable
+    @Resolvable<Resolver>
     init(closure: @escaping () -> Void) {
         self.closure = closure
     }
@@ -74,7 +74,7 @@ private struct Service3 {
     
     let value: Int
     
-    @Resolvable
+    @Resolvable<Resolver>
     init(defaultedValue: Int = 2) {
         self.value = defaultedValue
     }
@@ -82,7 +82,7 @@ private struct Service3 {
 
 private struct Service4 {
     let value: Float
-    @Resolvable
+    @Resolvable<Resolver>
     @Argument("value")
     init(value: Float) {
         self.value = value
@@ -91,7 +91,7 @@ private struct Service4 {
 
 private struct Service5 {
     let value: Float
-    @Resolvable
+    @Resolvable<Resolver>
     @Named("value", "float2")
     init(value: Float) {
         self.value = value
