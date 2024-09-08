@@ -9,9 +9,7 @@ import XCTest
 import SwinjectMacrosImplementations
 
 let testMacros: [String: Macro.Type] = [
-    "Resolvable": ResolvableMacro.self,
-    "Argument": ArgumentMacro.self,
-    "Named": NamedMacro.self,
+    "Resolvable": ResolvableMacro.self
 ]
 #endif
 
@@ -101,7 +99,6 @@ final class ResolvableTests: XCTestCase {
         assertMacroExpansion(
             """
             @Resolvable<Resolver>(names: ["value": "customName"])
-            @Named("value", "customName")
             init(value: Int) {}
             """,
             expandedSource: """
