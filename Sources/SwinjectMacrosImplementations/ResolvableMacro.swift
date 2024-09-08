@@ -74,10 +74,7 @@ public struct ResolvableMacro: PeerMacro {
         if param.isArgument {
             return "\(param.name): \(param.name)"
         }
-        if let defaultValue = param.defaultValue {
-            return "\(param.resolveCall) ?? \(defaultValue)"
-        }
-        return "\(param.resolveCall)!"
+        return param.resolveCall
     }
     
     private static func parseArguments(node: LabeledExprListSyntax) -> [String] {
@@ -139,10 +136,13 @@ private extension ResolvableMacro {
         var isArgument: Bool { hint == .argument }
         
         var resolveCall: String {
-            if let hint, case let ParamHint.named(swinjectName) = hint {
-                return "\(name): resolver.resolve(\(type.name).self, name: \"\(swinjectName)\")"
+            let knitCallName = TypeNamer.computedIdentifierName(type: type.name)
+            if let defaultValue {
+                return "\(name): \(defaultValue)"
+            } else if let hint, case let ParamHint.named(serviceName) = hint {
+                return "\(name): resolver.\(knitCallName)(name: .\(serviceName))"
             } else {
-                return "\(name): resolver.resolve(\(type.name).self)"
+                return "\(name): resolver.\(knitCallName)()"
             }
         }
     }

@@ -26,8 +26,8 @@ final class ResolvableTests: XCTestCase {
 
             static func make(resolver: Resolver) -> Self {
                  return .init(
-                     arg1: resolver.resolve(String.self)!,
-                     arg2: resolver.resolve(Int.self)!
+                     arg1: resolver.string(),
+                     arg2: resolver.int()
                  )
             }
             """,
@@ -47,7 +47,7 @@ final class ResolvableTests: XCTestCase {
 
             static func make(resolver: CustomResolver) -> Self {
                  return .init(
-                     closure: resolver.resolve((() -> Void).self)!
+                     closure: resolver.closure()
                  )
             }
             """,
@@ -67,7 +67,7 @@ final class ResolvableTests: XCTestCase {
 
             static func make(resolver: Resolver) -> Self {
                  return .init(
-                     value: resolver.resolve(Int.self) ?? 5
+                     value: 5
                  )
             }
             """,
@@ -107,7 +107,7 @@ final class ResolvableTests: XCTestCase {
 
             static func make(resolver: Resolver) -> Self {
                  return .init(
-                     value: resolver.resolve(Int.self, name: "customName")!
+                     value: resolver.int(name: .customName)
                  )
             }
             """,
