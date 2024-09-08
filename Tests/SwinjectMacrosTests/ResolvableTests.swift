@@ -100,7 +100,7 @@ final class ResolvableTests: XCTestCase {
     func test_named() throws {
         assertMacroExpansion(
             """
-            @Resolvable<Resolver>
+            @Resolvable<Resolver>(names: ["value": "customName"])
             @Named("value", "customName")
             init(value: Int) {}
             """,

@@ -90,8 +90,7 @@ private struct Service4 {
 
 private struct Service5 {
     let value: Float
-    @Resolvable<Resolver>
-    @Named("value", "float2")
+    @Resolvable<Resolver>(names: ["value": "float2"])
     init(value: Float) {
         self.value = value
     }

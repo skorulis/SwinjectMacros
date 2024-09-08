@@ -17,23 +17,31 @@ public struct ResolvableMacro: PeerMacro {
         }
         let resolverType = resolverTypeArg.description
         var arguments: [String] = []
+        var names: [String: String] = [:]
         if let nodeArgs = node.arguments?.as(LabeledExprListSyntax.self) {
             arguments = parseArguments(node: nodeArgs)
+            names = parseNames(node: nodeArgs)
         }
         
         guard let initDecl = declaration.as(InitializerDeclSyntax.self) else {
             throw Error.nonInitializer
         }
-        let hints = try parseHints(attributes: initDecl.attributes)
         let params = try initDecl.signature.parameterClause.parameters.map { paramSyntax in
             let type = try extractType(typeSyntax: paramSyntax.type)
             let name = paramSyntax.firstName.text
+            let hint: ParamHint?
+            if arguments.contains(name) {
+                hint = .argument
+            } else if let serviceName = names[name] {
+                hint = .named(serviceName)
+            } else {
+                hint = nil
+            }
             
             return Param(
                 name: name,
                 type: type,
-                hint: hints[name],
-                isArgument: arguments.contains(name),
+                hint: hint,
                 defaultValue: extractDefault(paramSyntax: paramSyntax)
             )
         }
@@ -77,19 +85,33 @@ public struct ResolvableMacro: PeerMacro {
             return []
         }
         return args.compactMap { arrayElement in
-            let content = arrayElement.expression.as(StringLiteralExprSyntax.self)?
-                .segments.first?.as(StringSegmentSyntax.self)?.content
-            return content?.description.trimmingCharacters(in: .init(charactersIn: "\""))
+            return arrayElement.expression.as(StringLiteralExprSyntax.self)?.textContent
         }
+    }
+    
+    static func parseNames(node: LabeledExprListSyntax) -> [String: String] {
+        guard let names = node.first(where: { $0.label?.description == "names"})?
+            .expression.as(DictionaryExprSyntax.self)?.content
+            .as(DictionaryElementListSyntax.self)
+        else {
+            return [:]
+        }
+        var result: [String: String] = [:]
+        for element in names {
+            guard let key = element.key.as(StringLiteralExprSyntax.self)?.textContent,
+                  let value = element.value.as(StringLiteralExprSyntax.self)?.textContent else {
+                continue
+            }
+            result[key] = value
+        }
+        
+        return result
     }
     
     private static func extractType(typeSyntax: TypeSyntax) throws -> TypeInformation {
         if let type = typeSyntax.as(IdentifierTypeSyntax.self) {
             return TypeInformation(name: type.name.text)
         } else if let type = typeSyntax.as(AttributedTypeSyntax.self) {
-            let isArgument = type.attributes.contains { element in
-                return element.description.trimmingCharacters(in: .whitespaces) == "@Argument"
-            }
             let baseType = try extractType(typeSyntax: type.baseType)
             return TypeInformation(name: baseType.name)
         } else if let type = typeSyntax.as(FunctionTypeSyntax.self) {
@@ -105,54 +127,6 @@ public struct ResolvableMacro: PeerMacro {
         return defaultValue.description.replacingOccurrences(of: "= ", with: "")
     }
     
-    private static func parseHints(attributes: AttributeListSyntax) throws -> [String: ParamHint] {
-        var hints: [String: ParamHint] = [:]
-        try attributes.forEach { element in
-            switch element {
-            case let .attribute(attribute):
-                if let hint = try self.hint(attribute: attribute) {
-                    hints[hint.0] = hint.1
-                }
-            case .ifConfigDecl:
-                break
-            }
-        }
-        return hints
-    }
-    
-    private static func hint(attribute: AttributeSyntax) throws -> (String, ParamHint)? {
-        guard let name = attribute.attributeName.as(IdentifierTypeSyntax.self)?.name.text else {
-            return nil
-        }
-        print(name)
-        guard let argumentList = attribute.arguments?.as(LabeledExprListSyntax.self) else {
-            return nil
-        }
-        if name == "Argument" {
-            let param = try Self.argumentListValue(argumentList, index: 0).replacingOccurrences(of: "\"", with: "")
-            return (param, .argument)
-        } else if name == "Named" {
-            let param = try Self.argumentListValue(argumentList, index: 0).replacingOccurrences(of: "\"", with: "")
-            // TODO: Allow for tokens
-            var value = try Self.argumentListValue(argumentList, index: 1)
-            value = "\"\(value)\""
-            return (param, .named(value))
-        }
-        
-        return nil
-    }
-    
-    private static func argumentListValue(_ list: LabeledExprListSyntax, index: Int) throws -> String {
-        guard list.count > index else {
-            throw Error.expectedArgumentName
-        }
-        let listArray = list.map { $0 }
-        let argument = listArray[index]
-        guard let expressions = argument.expression.as(StringLiteralExprSyntax.self) else {
-            throw Error.expectedExpression
-        }
-        return expressions.segments.first!.trimmedDescription
-    }
 }
 
 private extension ResolvableMacro {
@@ -160,12 +134,13 @@ private extension ResolvableMacro {
         let name: String
         let type: TypeInformation
         let hint: ParamHint?
-        let isArgument: Bool
         let defaultValue: String?
+        
+        var isArgument: Bool { hint == .argument }
         
         var resolveCall: String {
             if let hint, case let ParamHint.named(swinjectName) = hint {
-                return "\(name): resolver.resolve(\(type.name).self, name: \(swinjectName))"
+                return "\(name): resolver.resolve(\(type.name).self, name: \"\(swinjectName)\")"
             } else {
                 return "\(name): resolver.resolve(\(type.name).self)"
             }
@@ -210,5 +185,15 @@ private extension ResolvableMacro {
                 return "Expected expression"
             }
         }
+    }
+}
+
+// MARK: - Swift Syntax Extensions
+
+private extension StringLiteralExprSyntax {
+    
+    var textContent: String? {
+        segments.first?.as(StringSegmentSyntax.self)?.content
+            .description.trimmingCharacters(in: .init(charactersIn: "\""))
     }
 }
