@@ -64,7 +64,7 @@ private struct Service1 {
 private struct Service2 {
     let closure: () -> Void
     
-    @Resolvable<Resolver>
+    @Resolvable<Resolver>(arguments: ["TEST"])
     init(closure: @escaping () -> Void) {
         self.closure = closure
     }
@@ -82,8 +82,7 @@ private struct Service3 {
 
 private struct Service4 {
     let value: Float
-    @Resolvable<Resolver>
-    @Argument("value")
+    @Resolvable<Resolver>(arguments: ["value"])
     init(value: Float) {
         self.value = value
     }

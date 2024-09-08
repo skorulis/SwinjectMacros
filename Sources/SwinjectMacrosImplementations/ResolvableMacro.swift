@@ -16,6 +16,11 @@ public struct ResolvableMacro: PeerMacro {
             throw Error.missingResolverType
         }
         let resolverType = resolverTypeArg.description
+        var arguments: [String] = []
+        if let nodeArgs = node.arguments?.as(LabeledExprListSyntax.self) {
+            arguments = parseArguments(node: nodeArgs)
+        }
+        
         guard let initDecl = declaration.as(InitializerDeclSyntax.self) else {
             throw Error.nonInitializer
         }
@@ -28,6 +33,7 @@ public struct ResolvableMacro: PeerMacro {
                 name: name,
                 type: type,
                 hint: hints[name],
+                isArgument: arguments.contains(name),
                 defaultValue: extractDefault(paramSyntax: paramSyntax)
             )
         }
@@ -38,7 +44,6 @@ public struct ResolvableMacro: PeerMacro {
         let paramsString = paramsResolved.joined(separator: ",\n")
         var makeArguments = ["resolver: \(resolverType)"]
         for param in params {
-            
             if param.isArgument {
                 makeArguments.append("\(param.name): \(param.type.name)")
             }
@@ -65,6 +70,17 @@ public struct ResolvableMacro: PeerMacro {
             return "\(param.resolveCall) ?? \(defaultValue)"
         }
         return "\(param.resolveCall)!"
+    }
+    
+    private static func parseArguments(node: LabeledExprListSyntax) -> [String] {
+        guard let args = node.first(where: { $0.label?.description == "arguments"})?.expression.as(ArrayExprSyntax.self)?.elements else {
+            return []
+        }
+        return args.compactMap { arrayElement in
+            let content = arrayElement.expression.as(StringLiteralExprSyntax.self)?
+                .segments.first?.as(StringSegmentSyntax.self)?.content
+            return content?.description.trimmingCharacters(in: .init(charactersIn: "\""))
+        }
     }
     
     private static func extractType(typeSyntax: TypeSyntax) throws -> TypeInformation {
@@ -144,11 +160,8 @@ private extension ResolvableMacro {
         let name: String
         let type: TypeInformation
         let hint: ParamHint?
+        let isArgument: Bool
         let defaultValue: String?
-        
-        var isArgument: Bool {
-            hint == .argument
-        }
         
         var resolveCall: String {
             if let hint, case let ParamHint.named(swinjectName) = hint {

@@ -80,8 +80,7 @@ final class ResolvableTests: XCTestCase {
     func test_argument() throws {
         assertMacroExpansion(
             """
-            @Resolvable<Resolver>
-            @Argument("value")
+            @Resolvable<Resolver>(arguments: ["value"])
             init(value: Int) {}
             """,
             expandedSource: """
