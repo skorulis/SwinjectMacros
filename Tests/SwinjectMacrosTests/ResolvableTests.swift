@@ -114,4 +114,83 @@ final class ResolvableTests: XCTestCase {
             macros: testMacros
         )
     }
+    
+    func test_unused_argument() throws {
+        assertMacroExpansion(
+            """
+            @Resolvable<Resolver>(arguments: ["param1"])
+            init(value: Int) {}
+            """,
+            expandedSource: """
+            
+            init(value: Int) {}
+            """,
+            diagnostics: [
+                .init(message: "Argument: 'param1' was declared but is not a parameter", line: 1, column: 1),
+            ],
+            macros: testMacros
+        )
+    }
+    
+    func test_unused_name() throws {
+        assertMacroExpansion(
+            """
+            @Resolvable<Resolver>(names: ["param1": "test])
+            init(value: Int) {}
+            """,
+            expandedSource: """
+            
+            init(value: Int) {}
+            """,
+            diagnostics: [
+                .init(message: "Name: 'param1' was declared but is not a parameter", line: 1, column: 1),
+            ],
+            macros: testMacros
+        )
+    }
+    
+    func test_apply_static() throws {
+        assertMacroExpansion(
+            """
+            @Resolvable<Resolver>
+            static func makeThing(value: Int) -> Thing {
+                Thing(value: value)
+            }
+            """,
+            expandedSource: """
+            
+            static func makeThing(value: Int) -> Thing {
+                Thing(value: value)
+            }
+            
+            static func make(resolver: Resolver) -> Thing {
+                 return makeThing(
+                     value: resolver.int()
+                 )
+            }
+            """,
+            macros: testMacros
+        )
+    }
+    
+    func test_non_static_function() throws {
+        assertMacroExpansion(
+            """
+            @Resolvable<Resolver>
+            func makeThing(value: Int) -> Thing { .init() }
+            """,
+            expandedSource: """
+            
+            func makeThing(value: Int) -> Thing { .init() }
+            """,
+            diagnostics: [
+                .init(
+                    message: "@Resolvable can only be used on init declarations or static functions",
+                    line: 1,
+                    column: 1
+                ),
+            ],
+            macros: testMacros
+        )
+    }
 }

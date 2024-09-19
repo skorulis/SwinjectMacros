@@ -59,7 +59,7 @@ private struct Service1 {
 private struct Service2 {
     let closure: () -> Void
     
-    @Resolvable<Resolver>(arguments: ["TEST"])
+    @Resolvable<Resolver>()
     init(closure: @escaping () -> Void) {
         self.closure = closure
     }
